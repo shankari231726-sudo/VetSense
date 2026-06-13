@@ -8,13 +8,14 @@ import os
 import requests
 import boto3
 import math
+import numpy as np
 from dotenv import load_dotenv
 from tensorflow import keras
 from PIL import Image
 import io
 
 # Load skin disease model
-SKIN_MODEL = keras.models.load_model('/home/ubuntu/vetsense_best_model.keras')
+SKIN_MODEL = keras.models.load_model('/home/ubuntu/my-react-app/src/vetsense_best_model.keras')
 SKIN_CLASSES = sorted(['Dermatitis', 'Fungal_infections', 'Healthy', 'Hypersensitivity', 'demodicosis', 'ringworm'])
 
 SKIN_TREATMENTS = {
@@ -300,7 +301,7 @@ def nearby_vets():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    @app.route("/skin-diagnosis", methods=["POST"])
+@app.route("/skin-diagnosis", methods=["POST"])
 def skin_diagnosis():
     try:
         if 'image' not in request.files:
@@ -324,6 +325,50 @@ def skin_diagnosis():
             cur.close()
             db.close()
         return jsonify({"dog_name": dog_name, "predicted_disease": predicted_class, "confidence": confidence, "treatment": result['treatment'], "prescription": result['prescription'], "emergency": result['emergency']}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/feedback", methods=["POST"])
+def submit_feedback():
+    try:
+        data = request.json
+        name = data.get("name")
+        message = data.get("message")
+        rating = int(data.get("rating", 5))
+        if not name or not message:
+            return jsonify({"error": "Name and message required"}), 400
+        if rating < 1 or rating > 5:
+            return jsonify({"error": "Rating must be 1-5"}), 400
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("INSERT INTO feedback (name, message, rating) VALUES (%s, %s, %s)",
+                    (name, message, rating))
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Feedback submitted successfully!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/feedback", methods=["GET"])
+def get_feedback():
+    try:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("SELECT * FROM feedback ORDER BY created_at DESC LIMIT 10")
+        feedbacks = cur.fetchall()
+        cur.execute("SELECT AVG(rating) as avg_rating, COUNT(*) as total FROM feedback")
+        stats = cur.fetchone()
+        cur.close()
+        db.close()
+        for f in feedbacks:
+            if "created_at" in f and f["created_at"]:
+                f["created_at"] = str(f["created_at"])
+        return jsonify({
+            "feedbacks": feedbacks,
+            "avg_rating": round(float(stats["avg_rating"] or 0), 1),
+            "total_reviews": stats["total"]
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
         

@@ -201,6 +201,64 @@ function LoginPage() {
   );
 }
 
+
+// ================= FEEDBACK SECTION =================
+function FeedbackSection() {
+  const [feedbacks, setFeedbacks] = React.useState([]);
+  const [avgRating, setAvgRating] = React.useState(0);
+  const [total, setTotal] = React.useState(0);
+
+  React.useEffect(() => {
+    fetch(API + "/feedback")
+      .then(r => r.json())
+      .then(data => {
+        setFeedbacks(data.feedbacks || []);
+        setAvgRating(data.avg_rating || 0);
+        setTotal(data.total_reviews || 0);
+      })
+      .catch(e => console.log(e));
+  }, []);
+
+  const renderStars = (rating) => [1,2,3,4,5].map(s => (
+    <span key={s} style={{color: s <= rating ? "#f5a623" : "#ccc", fontSize: "22px"}}>★</span>
+  ));
+
+  return (
+    <section style={{padding:"80px", background:"#f6f1eb"}}>
+      <h1 style={{textAlign:"center", fontSize:"50px", color:"#5c3d2e", marginBottom:"20px"}}>⭐ User Reviews</h1>
+      <div style={{textAlign:"center", marginBottom:"50px"}}>
+        <div style={{fontSize:"80px", color:"#f5a623", fontWeight:"700"}}>{(avgRating * 2).toFixed(1)}</div>
+        <div style={{fontSize:"24px", color:"#8d6e63"}}>out of 10</div>
+        <div style={{fontSize:"18px", color:"#aaa", marginTop:"5px"}}>{total} reviews</div>
+        <div style={{marginTop:"10px"}}>{renderStars(Math.round(avgRating))}</div>
+        <div style={{fontSize:"18px", color:"#8d6e63", marginTop:"5px"}}>{avgRating}/5 average rating</div>
+      </div>
+      {feedbacks.length === 0 && (
+        <p style={{textAlign:"center", color:"#aaa", fontSize:"18px"}}>No reviews yet. Be the first to review!</p>
+      )}
+      {feedbacks.length > 0 && (
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:"25px", maxWidth:"1200px", margin:"auto"}}>
+          {feedbacks.map((f, i) => (
+            <div key={i} style={{background:"#fffaf5", padding:"30px", borderRadius:"20px", boxShadow:"0 5px 15px rgba(0,0,0,0.06)"}}>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"15px"}}>
+                <h3 style={{color:"#5c3d2e", margin:0}}>👤 {f.name}</h3>
+                <div>{renderStars(f.rating)}</div>
+              </div>
+              <p style={{color:"#6d4c41", lineHeight:"1.8", fontSize:"16px"}}>"{f.message}"</p>
+              <p style={{color:"#aaa", fontSize:"13px", marginTop:"10px"}}>{f.created_at ? f.created_at.split(" ")[0] : ""}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{textAlign:"center", marginTop:"40px"}}>
+        <a href="/feedback">
+          <button style={{width:"auto", padding:"15px 40px", fontSize:"18px", background:"#b08968"}}>✍️ Write a Review</button>
+        </a>
+      </div>
+    </section>
+  );
+}
+
 // ================= HOME PAGE =================
 function HomePage() {
   return (
@@ -251,6 +309,7 @@ function HomePage() {
           <div className="workflow-card"><h2>4️⃣ Get Report</h2><p>Download reports and consult nearby veterinarians.</p></div>
         </div>
       </section>
+      <FeedbackSection />
       <footer className="footer"><h2>VetSense 🐾</h2><p>AI-Powered Canine Diagnosis & Health Monitoring Platform</p></footer>
     </div>
   );
@@ -760,14 +819,75 @@ function ReminderPage() {
         <input type="number" placeholder="Dog Age (years)" value={dogAge} onChange={e => setDogAge(e.target.value)} />
         <input type="number" placeholder="Dog Age in Months (e.g. 6)" value={ageMonths} onChange={e => setAgeMonths(e.target.value)} />
         <select value={breed} onChange={e => setBreed(e.target.value)}>
-          <option value="general">General</option>
-          <option value="labrador">Labrador</option>
-          <option value="german shepherd">German Shepherd</option>
-          <option value="poodle">Poodle</option>
-          <option value="bulldog">Bulldog</option>
-          <option value="beagle">Beagle</option>
-        </select>
-        <input type="date" value={lastVaccine} onChange={e => setLastVaccine(e.target.value)} />
+  <option value="general">General</option>
+  <option value="labrador">Labrador Retriever</option>
+  <option value="german shepherd">German Shepherd</option>
+  <option value="golden retriever">Golden Retriever</option>
+  <option value="pug">Pug</option>
+  <option value="beagle">Beagle</option>
+  <option value="rottweiler">Rottweiler</option>
+  <option value="dobermann">Dobermann</option>
+  <option value="siberian husky">Siberian Husky</option>
+  <option value="shih tzu">Shih Tzu</option>
+  <option value="pomeranian">Pomeranian</option>
+  <option value="dachshund">Dachshund</option>
+  <option value="boxer">Boxer</option>
+  <option value="great dane">Great Dane</option>
+  <option value="cocker spaniel">Cocker Spaniel</option>
+  <option value="saint bernard">Saint Bernard</option>
+  <option value="rajapalayam">Rajapalayam</option>
+  <option value="kombai">Kombai</option>
+  <option value="kanni">Kanni</option>
+  <option value="chippiparai">Chippiparai</option>
+  <option value="indian pariah">Indian Pariah</option>
+  <option value="border collie">Border Collie</option>
+  <option value="australian shepherd">Australian Shepherd</option>
+  <option value="belgian malinois">Belgian Malinois</option>
+  <option value="bull terrier">Bull Terrier</option>
+  <option value="basset hound">Basset Hound</option>
+  <option value="bloodhound">Bloodhound</option>
+  <option value="boston terrier">Boston Terrier</option>
+  <option value="chihuahua">Chihuahua</option>
+  <option value="dalmatian">Dalmatian</option>
+  <option value="english bulldog">English Bulldog</option>
+  <option value="french bulldog">French Bulldog</option>
+  <option value="akita">Akita</option>
+  <option value="american eskimo">American Eskimo Dog</option>
+  <option value="bernese mountain">Bernese Mountain Dog</option>
+  <option value="bichon frise">Bichon Frise</option>
+  <option value="cane corso">Cane Corso</option>
+  <option value="chow chow">Chow Chow</option>
+  <option value="english cocker spaniel">English Cocker Spaniel</option>
+  <option value="english springer spaniel">English Springer Spaniel</option>
+  <option value="flat-coated retriever">Flat-Coated Retriever</option>
+  <option value="jack russell terrier">Jack Russell Terrier</option>
+  <option value="newfoundland">Newfoundland</option>
+  <option value="papillon">Papillon</option>
+  <option value="pekingese">Pekingese</option>
+  <option value="samoyed">Samoyed</option>
+  <option value="scottish terrier">Scottish Terrier</option>
+  <option value="shar pei">Shar Pei</option>
+  <option value="weimaraner">Weimaraner</option>
+  <option value="whippet">Whippet</option>
+  <option value="yorkshire terrier">Yorkshire Terrier</option>
+  <option value="miniature schnauzer">Miniature Schnauzer</option>
+  <option value="poodle">Poodle</option>
+</select>
+
+<label style={{
+  display: "block",
+  marginTop: "18px",
+  color: "#8d6e63",
+  fontWeight: "600",
+  fontSize: "15px"
+}}>
+  📅 Last Vaccine Date:
+</label>
+<input
+  type="date"
+  value={lastVaccine}
+  onChange={e => setLastVaccine(e.target.value)}
+/>
         <button onClick={calculateReminder} disabled={loading}>
           {loading ? "Calculating..." : "Calculate Next Vaccine"}
         </button>
@@ -797,14 +917,62 @@ function ReminderPage() {
 
 // ================= FEEDBACK PAGE =================
 function FeedbackPage() {
+  const [name, setName] = React.useState("");
+  const [message, setMessage] = React.useState("");
+  const [rating, setRating] = React.useState(5);
+  const [submitted, setSubmitted] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!name || !message) { alert("Please fill all fields!"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(API + "/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, message, rating })
+      });
+      const data = await res.json();
+      if (data.message) {
+        setSubmitted(true);
+        setName(""); setMessage(""); setRating(5);
+      } else {
+        alert("Error: " + (data.error || "Failed"));
+      }
+    } catch(e) { alert("Server error!"); }
+    setLoading(false);
+  };
+
   return (
     <div className="simple-page">
       <Navbar />
       <h1>⭐ Feedback</h1>
-      <div className="feedback-box">
-        <input type="text" placeholder="Your Name" />
-        <textarea placeholder="Share your experience..."></textarea>
-        <button>Submit Feedback</button>
+      {submitted && (
+        <div style={{textAlign:"center", color:"green", fontSize:"20px", marginBottom:"20px"}}>
+          ✅ Thank you for your feedback!
+        </div>
+      )}
+      <div className="feedback-box" style={{padding:"45px"}}>
+        <input type="text" placeholder="Your Name" value={name} onChange={e => setName(e.target.value)} />
+        <textarea placeholder="Share your experience..." value={message} onChange={e => setMessage(e.target.value)}></textarea>
+        <label style={{display:"block", marginTop:"18px", color:"#8d6e63", fontWeight:"600", fontSize:"15px"}}>
+          Rate VetSense:
+        </label>
+        <div style={{display:"flex", gap:"15px", marginTop:"10px", justifyContent:"center"}}>
+          {[1,2,3,4,5].map(star => (
+            <span
+              key={star}
+              onClick={() => setRating(star)}
+              style={{fontSize:"45px", cursor:"pointer", color: star <= rating ? "#f5a623" : "#ccc", transition:"0.2s"}}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+        <p style={{textAlign:"center", color:"#8d6e63", marginTop:"10px", fontSize:"18px"}}>{rating}/5 Stars</p>
+        <button onClick={handleSubmit} disabled={loading}>
+          {loading ? "Submitting..." : "Submit Feedback"}
+        </button>
       </div>
     </div>
   );
