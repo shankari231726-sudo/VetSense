@@ -61,7 +61,7 @@ import {
   useLocation
 } from "react-router-dom";
 
-const API = "http://13.49.229.134:5000";
+const API = "http://13.63.114.157:5000";
 
 // ================= NAVBAR =================
 function Navbar() {
@@ -114,6 +114,7 @@ function RegisterPage() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user_id", data.user_id);
         localStorage.setItem("name", data.name);
+        localStorage.setItem("phone", phone);
         alert(`✅ Welcome ${data.name}! Registration Successful! SMS sent to your phone.`);
         navigate("/login");
       } else {
@@ -769,6 +770,7 @@ function ReminderPage() {
   const [schedule, setSchedule] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const user_id = localStorage.getItem("user_id") || 1;
+  const userPhone = localStorage.getItem("phone") || "";
 
   const calculateReminder = async () => {
     if (!lastVaccine) return;
@@ -778,7 +780,7 @@ function ReminderPage() {
     setNextVaccine(nextDate.toDateString());
     const today = new Date();
     const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
-    setAlert(diffDays <= 30);
+    setAlert(diffDays <= 30 || diffDays <= 0);
 
     // Call vaccination API
     if (ageMonths) {
@@ -787,7 +789,7 @@ function ReminderPage() {
         const res = await fetch(`${API}/vaccination-schedule`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dog_name: dogName, breed, age_months: ageMonths, user_id })
+          body: JSON.stringify({ dog_name: dogName, breed, age_months: ageMonths, user_id, phone: userPhone })
         });
         const data = await res.json();
         setSchedule(data.vaccination_schedule || []);
@@ -811,7 +813,9 @@ function ReminderPage() {
         <div className="reminder-feature-card"><h2>📅 Auto Scheduling</h2><p>VetSense automatically calculates the next vaccine schedule.</p></div>
       </div>
       {alert && (
-        <div className="alert-box">⚠ Vaccination Date is Near! Please visit your veterinarian soon.</div>
+        <div className="alert-box">
+          🚨 URGENT! Vaccination Date is Today or Overdue! Please visit your veterinarian IMMEDIATELY!
+        </div>
       )}
       <div className="reminder-card">
         <h2>Enter Dog Details</h2>

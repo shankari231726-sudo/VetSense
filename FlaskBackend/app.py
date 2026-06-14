@@ -309,9 +309,10 @@ def skin_diagnosis():
         file = request.files['image']
         user_id = request.form.get('user_id')
         dog_name = request.form.get('dog_name', 'Unknown')
-        img = Image.open(io.BytesIO(file.read())).resize((224, 224))
-        img_array = np.array(img)
-        img_array = np.expand_dims(img_array, axis=0)
+        img = Image.open(io.BytesIO(file.read())).convert("RGB").resize((224, 224))
+img_array = np.array(img, dtype=np.float32)
+img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
+img_array = np.expand_dims(img_array, axis=0)
         prediction = SKIN_MODEL.predict(img_array, verbose=0)
         predicted_class = SKIN_CLASSES[np.argmax(prediction)]
         confidence = round(float(np.max(prediction)) * 100, 2)
