@@ -172,6 +172,7 @@ function LoginPage() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user_id", data.user_id);
         localStorage.setItem("name", data.name);
+        localStorage.setItem("phone", data.phone || "");
         navigate("/home");
       } else {
         alert("❌ " + (data.error || "Login failed"));

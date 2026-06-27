@@ -108,7 +108,7 @@ def login():
         if not bcrypt.checkpw(password.encode("utf-8"), user["password"].encode("utf-8")):
             return jsonify({"error": "Incorrect password"}), 401
         token = generate_token(user["id"], email)
-        return jsonify({"message": "Login successful", "token": token, "name": user["name"], "user_id": user["id"]}), 200
+        return jsonify({"message": "Login successful", "token": token, "name": user["name"], "user_id": user["id"], "phone": user["phone"]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -245,10 +245,19 @@ def vaccination_schedule():
             cur.close()
             db.close()
         # Send vaccination reminder SMS
+        print(f"DEBUG: phone received = '{phone}'")
+        print(f"DEBUG: schedule = {schedule}")
         if phone:
             high_priority = [s["vaccine"] for s in schedule if s["priority"] == "High"]
+            print(f"DEBUG: high_priority = {high_priority}")
             if high_priority:
-                send_sms(phone, f"VetSense Vaccination Reminder for {dog_name}: {', '.join(high_priority[:2])} due soon! Please visit your vet.")
+                print(f"DEBUG: calling send_sms now...")
+                sms_result = send_sms(phone, f"VetSense Vaccination Reminder for {dog_name}: {', '.join(high_priority[:2])} due soon! Please visit your vet.")
+                print(f"DEBUG: send_sms returned {sms_result}")
+            else:
+                print("DEBUG: no high priority vaccines, skipping SMS")
+        else:
+            print("DEBUG: phone is empty, skipping SMS")
         return jsonify({"dog_name": dog_name, "breed": breed, "age_months": age_months, "vaccination_schedule": schedule, "total_vaccines": len(schedule)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -310,9 +319,8 @@ def skin_diagnosis():
         user_id = request.form.get('user_id')
         dog_name = request.form.get('dog_name', 'Unknown')
         img = Image.open(io.BytesIO(file.read())).convert("RGB").resize((224, 224))
-img_array = np.array(img, dtype=np.float32)
-img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
-img_array = np.expand_dims(img_array, axis=0)
+        img_array = np.array(img)
+        img_array = np.expand_dims(img_array, axis=0)
         prediction = SKIN_MODEL.predict(img_array, verbose=0)
         predicted_class = SKIN_CLASSES[np.argmax(prediction)]
         confidence = round(float(np.max(prediction)) * 100, 2)
