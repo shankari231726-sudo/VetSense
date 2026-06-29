@@ -261,6 +261,305 @@ function FeedbackSection() {
   );
 }
 
+
+
+// ================= ADMIN LOGIN PAGE =================
+function AdminLoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  const handleAdminLogin = async () => {
+    if (!email || !password) { alert("Please enter email and password!"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem("admin_token", data.token);
+        localStorage.setItem("admin_name", data.name);
+        navigate("/admin-dashboard");
+      } else {
+        alert("Error: " + (data.error || "Login failed"));
+      }
+    } catch (e) {
+      alert("Server error!");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="video-page" style={{background:"#2b2118"}}>
+      <div className="glass-card">
+        <h1>Admin Login 🔐</h1>
+        <p>VetSense Administration Panel</p>
+        <input type="email" placeholder="Admin Email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input type="password" placeholder="Admin Password" value={password} onChange={e => setPassword(e.target.value)} />
+        <button onClick={handleAdminLogin} disabled={loading}>
+          {loading ? "Logging in..." : "Login as Admin"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ================= ADMIN DASHBOARD PAGE =================
+function AdminDashboardPage() {
+  const navigate = useNavigate();
+  const [tab, setTab] = React.useState("users");
+  const [users, setUsers] = React.useState([]);
+  const [vaccines, setVaccines] = React.useState([]);
+  const [clinics, setClinics] = React.useState([]);
+  const adminName = localStorage.getItem("admin_name") || "Admin";
+
+  const [editingUser, setEditingUser] = React.useState(null);
+  const [editingVaccine, setEditingVaccine] = React.useState(null);
+  const [editingClinic, setEditingClinic] = React.useState(null);
+  const [showAddVaccine, setShowAddVaccine] = React.useState(false);
+  const [showAddClinic, setShowAddClinic] = React.useState(false);
+
+  const loadUsers = () => fetch(`${API}/admin/users`).then(r => r.json()).then(d => setUsers(d.users || []));
+  const loadVaccines = () => fetch(`${API}/admin/vaccines`).then(r => r.json()).then(d => setVaccines(d.vaccines || []));
+  const loadClinics = () => fetch(`${API}/admin/clinics`).then(r => r.json()).then(d => setClinics(d.clinics || []));
+
+  React.useEffect(() => {
+    loadUsers(); loadVaccines(); loadClinics();
+  }, []);
+
+  const handleLogoutAdmin = () => {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_name");
+    navigate("/admin-login");
+  };
+
+  const deleteUser = async (id) => {
+    if (!window.confirm("Delete this user?")) return;
+    await fetch(`${API}/admin/users/${id}`, { method: "DELETE" });
+    loadUsers();
+  };
+
+  const saveUser = async () => {
+    await fetch(`${API}/admin/users/${editingUser.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingUser)
+    });
+    setEditingUser(null);
+    loadUsers();
+  };
+
+  const deleteVaccine = async (id) => {
+    if (!window.confirm("Delete this vaccine rule?")) return;
+    await fetch(`${API}/admin/vaccines/${id}`, { method: "DELETE" });
+    loadVaccines();
+  };
+
+  const saveVaccine = async () => {
+    const method = editingVaccine.id ? "PUT" : "POST";
+    const url = editingVaccine.id ? `${API}/admin/vaccines/${editingVaccine.id}` : `${API}/admin/vaccines`;
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingVaccine)
+    });
+    setEditingVaccine(null);
+    setShowAddVaccine(false);
+    loadVaccines();
+  };
+
+  const deleteClinic = async (id) => {
+    if (!window.confirm("Delete this clinic?")) return;
+    await fetch(`${API}/admin/clinics/${id}`, { method: "DELETE" });
+    loadClinics();
+  };
+
+  const saveClinic = async () => {
+    const method = editingClinic.id ? "PUT" : "POST";
+    const url = editingClinic.id ? `${API}/admin/clinics/${editingClinic.id}` : `${API}/admin/clinics`;
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingClinic)
+    });
+    setEditingClinic(null);
+    setShowAddClinic(false);
+    loadClinics();
+  };
+
+  const thStyle = { padding: "12px", textAlign: "left", borderBottom: "2px solid #d6c1b2", color: "#5c3d2e" };
+  const tdStyle = { padding: "12px", borderBottom: "1px solid #eee" };
+  const btnSmall = { width: "auto", padding: "6px 14px", fontSize: "14px", marginTop: "0", marginRight: "8px" };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f6f1eb" }}>
+      <nav className="navbar">
+        <div className="logo">🔐 VetSense Admin</div>
+        <ul>
+          <li style={{color:"#5c3d2e", fontWeight:600}}>Welcome, {adminName}</li>
+          <li><button className="logout-btn" onClick={handleLogoutAdmin}>Logout</button></li>
+        </ul>
+      </nav>
+
+      <div style={{ padding: "40px" }}>
+        <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
+          <button style={{...btnSmall, width:"150px", background: tab==="users"?"#8d6e63":"#b08968"}} onClick={() => setTab("users")}>👥 Users</button>
+          <button style={{...btnSmall, width:"150px", background: tab==="vaccines"?"#8d6e63":"#b08968"}} onClick={() => setTab("vaccines")}>💉 Vaccines</button>
+          <button style={{...btnSmall, width:"150px", background: tab==="clinics"?"#8d6e63":"#b08968"}} onClick={() => setTab("clinics")}>🏥 Clinics</button>
+        </div>
+
+        {/* USERS TAB */}
+        {tab === "users" && (
+          <div style={{ background: "#fffaf5", borderRadius: "20px", padding: "30px", overflowX: "auto" }}>
+            <h2 style={{marginBottom:"20px", color:"#5c3d2e"}}>Registered Users ({users.length})</h2>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>ID</th><th style={thStyle}>Name</th><th style={thStyle}>Email</th>
+                  <th style={thStyle}>Phone</th><th style={thStyle}>Joined</th><th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td style={tdStyle}>{u.id}</td>
+                    <td style={tdStyle}>{u.name}</td>
+                    <td style={tdStyle}>{u.email}</td>
+                    <td style={tdStyle}>{u.phone || "-"}</td>
+                    <td style={tdStyle}>{u.created_at}</td>
+                    <td style={tdStyle}>
+                      <button style={{...btnSmall, background:"#4CAF50"}} onClick={() => setEditingUser({...u})}>Edit</button>
+                      <button style={{...btnSmall, background:"#d84315"}} onClick={() => deleteUser(u.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {editingUser && (
+              <div style={{ marginTop: "30px", background: "#f1e5d8", padding: "25px", borderRadius: "15px", maxWidth: "400px" }}>
+                <h3 style={{marginBottom:"15px"}}>Edit User</h3>
+                <input type="text" placeholder="Name" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} />
+                <input type="email" placeholder="Email" value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} />
+                <input type="text" placeholder="Phone" value={editingUser.phone || ""} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} />
+                <div style={{display:"flex", gap:"10px"}}>
+                  <button onClick={saveUser}>Save</button>
+                  <button style={{background:"#888"}} onClick={() => setEditingUser(null)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VACCINES TAB */}
+        {tab === "vaccines" && (
+          <div style={{ background: "#fffaf5", borderRadius: "20px", padding: "30px", overflowX: "auto" }}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px"}}>
+              <h2 style={{color:"#5c3d2e"}}>Vaccination Rules ({vaccines.length})</h2>
+              <button style={{...btnSmall, background:"#4CAF50"}} onClick={() => { setEditingVaccine({breed:"general", age_min_months:0, age_max_months:12, vaccine_name:"", due_text:"", priority:"High"}); setShowAddVaccine(true); }}>+ Add Vaccine</button>
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Breed</th><th style={thStyle}>Age Range (months)</th><th style={thStyle}>Vaccine</th>
+                  <th style={thStyle}>Due</th><th style={thStyle}>Priority</th><th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vaccines.map(v => (
+                  <tr key={v.id}>
+                    <td style={tdStyle}>{v.breed}</td>
+                    <td style={tdStyle}>{v.age_min_months} - {v.age_max_months}</td>
+                    <td style={tdStyle}>{v.vaccine_name}</td>
+                    <td style={tdStyle}>{v.due_text}</td>
+                    <td style={tdStyle}>{v.priority}</td>
+                    <td style={tdStyle}>
+                      <button style={{...btnSmall, background:"#4CAF50"}} onClick={() => { setEditingVaccine({...v}); setShowAddVaccine(true); }}>Edit</button>
+                      <button style={{...btnSmall, background:"#d84315"}} onClick={() => deleteVaccine(v.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {showAddVaccine && editingVaccine && (
+              <div style={{ marginTop: "30px", background: "#f1e5d8", padding: "25px", borderRadius: "15px", maxWidth: "450px" }}>
+                <h3 style={{marginBottom:"15px"}}>{editingVaccine.id ? "Edit Vaccine" : "Add Vaccine"}</h3>
+                <input type="text" placeholder="Breed (or 'general')" value={editingVaccine.breed} onChange={e => setEditingVaccine({...editingVaccine, breed: e.target.value})} />
+                <input type="number" placeholder="Min Age (months)" value={editingVaccine.age_min_months} onChange={e => setEditingVaccine({...editingVaccine, age_min_months: e.target.value})} />
+                <input type="number" placeholder="Max Age (months)" value={editingVaccine.age_max_months} onChange={e => setEditingVaccine({...editingVaccine, age_max_months: e.target.value})} />
+                <input type="text" placeholder="Vaccine Name" value={editingVaccine.vaccine_name} onChange={e => setEditingVaccine({...editingVaccine, vaccine_name: e.target.value})} />
+                <input type="text" placeholder="Due (e.g. 'Every year')" value={editingVaccine.due_text} onChange={e => setEditingVaccine({...editingVaccine, due_text: e.target.value})} />
+                <select value={editingVaccine.priority} onChange={e => setEditingVaccine({...editingVaccine, priority: e.target.value})}>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+                <div style={{display:"flex", gap:"10px"}}>
+                  <button onClick={saveVaccine}>Save</button>
+                  <button style={{background:"#888"}} onClick={() => { setEditingVaccine(null); setShowAddVaccine(false); }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CLINICS TAB */}
+        {tab === "clinics" && (
+          <div style={{ background: "#fffaf5", borderRadius: "20px", padding: "30px", overflowX: "auto" }}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px"}}>
+              <h2 style={{color:"#5c3d2e"}}>Veterinary Clinics ({clinics.length})</h2>
+              <button style={{...btnSmall, background:"#4CAF50"}} onClick={() => { setEditingClinic({name:"", address:"", phone:"", latitude:9.9252, longitude:78.1198}); setShowAddClinic(true); }}>+ Add Clinic</button>
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Name</th><th style={thStyle}>Address</th><th style={thStyle}>Phone</th>
+                  <th style={thStyle}>Lat</th><th style={thStyle}>Lng</th><th style={thStyle}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clinics.map(c => (
+                  <tr key={c.id}>
+                    <td style={tdStyle}>{c.name}</td>
+                    <td style={tdStyle}>{c.address}</td>
+                    <td style={tdStyle}>{c.phone}</td>
+                    <td style={tdStyle}>{c.latitude}</td>
+                    <td style={tdStyle}>{c.longitude}</td>
+                    <td style={tdStyle}>
+                      <button style={{...btnSmall, background:"#4CAF50"}} onClick={() => { setEditingClinic({...c}); setShowAddClinic(true); }}>Edit</button>
+                      <button style={{...btnSmall, background:"#d84315"}} onClick={() => deleteClinic(c.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {showAddClinic && editingClinic && (
+              <div style={{ marginTop: "30px", background: "#f1e5d8", padding: "25px", borderRadius: "15px", maxWidth: "450px" }}>
+                <h3 style={{marginBottom:"15px"}}>{editingClinic.id ? "Edit Clinic" : "Add Clinic"}</h3>
+                <input type="text" placeholder="Clinic Name" value={editingClinic.name} onChange={e => setEditingClinic({...editingClinic, name: e.target.value})} />
+                <input type="text" placeholder="Address" value={editingClinic.address} onChange={e => setEditingClinic({...editingClinic, address: e.target.value})} />
+                <input type="text" placeholder="Phone" value={editingClinic.phone} onChange={e => setEditingClinic({...editingClinic, phone: e.target.value})} />
+                <input type="number" placeholder="Latitude" value={editingClinic.latitude} onChange={e => setEditingClinic({...editingClinic, latitude: e.target.value})} />
+                <input type="number" placeholder="Longitude" value={editingClinic.longitude} onChange={e => setEditingClinic({...editingClinic, longitude: e.target.value})} />
+                <div style={{display:"flex", gap:"10px"}}>
+                  <button onClick={saveClinic}>Save</button>
+                  <button style={{background:"#888"}} onClick={() => { setEditingClinic(null); setShowAddClinic(false); }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ================= HOME PAGE =================
 function HomePage() {
   return (
@@ -670,10 +969,13 @@ function DashboardPage() {
           <input type="text" placeholder="Dog Name" value={dogName} onChange={e => setDogName(e.target.value)} />
           <input type="number" placeholder="Dog Age (years)" value={dogAge} onChange={e => setDogAge(e.target.value)} />
           <input type="number" placeholder="Dog Weight (kg)" value={dogWeight} onChange={e => setDogWeight(e.target.value)} />
+          <label style={{display:"block", marginTop:"18px", color:"#8d6e63", fontWeight:"600", fontSize:"15px"}}>
+            How active is your dog daily?
+          </label>
           <select value={activityLevel} onChange={e => setActivityLevel(e.target.value)}>
-            <option value="low">Low Activity</option>
-            <option value="moderate">Moderate Activity</option>
-            <option value="high">High Activity</option>
+            <option value="low">🛌 Mostly rests, only short walks</option>
+            <option value="moderate">🚶 Regular walks, plays sometimes</option>
+            <option value="high">🏃 Very energetic, runs/plays a lot</option>
           </select>
           <button onClick={handleGeneralCheckup} disabled={loading}>
             {loading ? "Analyzing..." : "Predict Health Condition"}
@@ -705,12 +1007,31 @@ function DashboardPage() {
           <input type="text" placeholder="Address" value={address} onChange={e => setAddress(e.target.value)} />
 
           <h3>Symptoms</h3>
-          {symptoms.map(s => (
-            <label key={s} style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
-              <input type="checkbox" checked={selectedSymptoms.includes(s)} onChange={() => toggleSymptom(s)} />
-              {symptomLabels[s]}
-            </label>
-          ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+            {symptoms.map(s => (
+              <label
+                key={s}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "24px 1fr",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "10px 14px",
+                  background: "#f1e5d8",
+                  borderRadius: "10px",
+                  cursor: "pointer"
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedSymptoms.includes(s)}
+                  onChange={() => toggleSymptom(s)}
+                  style={{ width: "18px", height: "18px", margin: 0 }}
+                />
+                <span style={{ color: "#4e342e", fontSize: "16px" }}>{symptomLabels[s]}</span>
+              </label>
+            ))}
+          </div>
 
           <h3>Upload Dog Image (for skin disease detection)</h3>
           <input type="file" accept="image/*" onChange={(e) => {
@@ -996,6 +1317,8 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/reminder" element={<ReminderPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
+        <Route path="/admin-login" element={<AdminLoginPage />} />
+        <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
       </Routes>
       <style>{`
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');

@@ -381,5 +381,211 @@ def get_feedback():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
         
+
+
+# ================= ADMIN ROUTES =================
+
+@app.route("/admin/login", methods=["POST"])
+def admin_login():
+    try:
+        data = request.json
+        email = data.get("email")
+        password = data.get("password")
+        if not email or not password:
+            return jsonify({"error": "Email and password required"}), 400
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("SELECT * FROM admins WHERE email = %s", (email,))
+        admin = cur.fetchone()
+        cur.close()
+        db.close()
+        if not admin:
+            return jsonify({"error": "Admin not found"}), 404
+        if not bcrypt.checkpw(password.encode("utf-8"), admin["password"].encode("utf-8")):
+            return jsonify({"error": "Incorrect password"}), 401
+        token = generate_token(admin["id"], email)
+        return jsonify({"message": "Admin login successful", "token": token, "name": admin["name"], "admin_id": admin["id"]}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------- USERS MANAGEMENT ----------
+
+@app.route("/admin/users", methods=["GET"])
+def admin_get_users():
+    try:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("SELECT id, name, email, phone, created_at FROM users ORDER BY id DESC")
+        users = cur.fetchall()
+        cur.close()
+        db.close()
+        for u in users:
+            if u.get("created_at"):
+                u["created_at"] = str(u["created_at"])
+        return jsonify({"users": users}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/users/<int:user_id>", methods=["PUT"])
+def admin_update_user(user_id):
+    try:
+        data = request.json
+        name = data.get("name")
+        email = data.get("email")
+        phone = data.get("phone")
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("UPDATE users SET name=%s, email=%s, phone=%s WHERE id=%s", (name, email, phone, user_id))
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "User updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/users/<int:user_id>", methods=["DELETE"])
+def admin_delete_user(user_id):
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("DELETE FROM users WHERE id=%s", (user_id,))
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "User deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------- VACCINES MANAGEMENT ----------
+
+@app.route("/admin/vaccines", methods=["GET"])
+def admin_get_vaccines():
+    try:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("SELECT * FROM vaccines ORDER BY breed, age_min_months")
+        vaccines = cur.fetchall()
+        cur.close()
+        db.close()
+        for v in vaccines:
+            if v.get("created_at"):
+                v["created_at"] = str(v["created_at"])
+        return jsonify({"vaccines": vaccines}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/vaccines", methods=["POST"])
+def admin_add_vaccine():
+    try:
+        data = request.json
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO vaccines (breed, age_min_months, age_max_months, vaccine_name, due_text, priority) VALUES (%s, %s, %s, %s, %s, %s)",
+            (data.get("breed"), data.get("age_min_months"), data.get("age_max_months"), data.get("vaccine_name"), data.get("due_text"), data.get("priority"))
+        )
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Vaccine added successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/vaccines/<int:vaccine_id>", methods=["PUT"])
+def admin_update_vaccine(vaccine_id):
+    try:
+        data = request.json
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            "UPDATE vaccines SET breed=%s, age_min_months=%s, age_max_months=%s, vaccine_name=%s, due_text=%s, priority=%s WHERE id=%s",
+            (data.get("breed"), data.get("age_min_months"), data.get("age_max_months"), data.get("vaccine_name"), data.get("due_text"), data.get("priority"), vaccine_id)
+        )
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Vaccine updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/vaccines/<int:vaccine_id>", methods=["DELETE"])
+def admin_delete_vaccine(vaccine_id):
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("DELETE FROM vaccines WHERE id=%s", (vaccine_id,))
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Vaccine deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------- CLINICS MANAGEMENT ----------
+
+@app.route("/admin/clinics", methods=["GET"])
+def admin_get_clinics():
+    try:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("SELECT * FROM clinics ORDER BY id")
+        clinics = cur.fetchall()
+        cur.close()
+        db.close()
+        for c in clinics:
+            if c.get("created_at"):
+                c["created_at"] = str(c["created_at"])
+        return jsonify({"clinics": clinics}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/clinics", methods=["POST"])
+def admin_add_clinic():
+    try:
+        data = request.json
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO clinics (name, address, phone, latitude, longitude) VALUES (%s, %s, %s, %s, %s)",
+            (data.get("name"), data.get("address"), data.get("phone"), data.get("latitude"), data.get("longitude"))
+        )
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Clinic added successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/clinics/<int:clinic_id>", methods=["PUT"])
+def admin_update_clinic(clinic_id):
+    try:
+        data = request.json
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            "UPDATE clinics SET name=%s, address=%s, phone=%s, latitude=%s, longitude=%s WHERE id=%s",
+            (data.get("name"), data.get("address"), data.get("phone"), data.get("latitude"), data.get("longitude"), clinic_id)
+        )
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Clinic updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/clinics/<int:clinic_id>", methods=["DELETE"])
+def admin_delete_clinic(clinic_id):
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("DELETE FROM clinics WHERE id=%s", (clinic_id,))
+        db.commit()
+        cur.close()
+        db.close()
+        return jsonify({"message": "Clinic deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
